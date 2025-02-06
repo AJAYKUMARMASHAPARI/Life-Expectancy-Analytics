@@ -1,0 +1,360 @@
+---
+title: "Final Project"
+author: "Sai Akshay Reddy Mavuram, Sai Sreekar Jakku, Ajay Kumar Mashapari"
+date: "2024-04-24"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,comment = '', fig.width = 6, fig.height = 6
+  )
+```
+
+**Importing Packages**
+
+```{r}
+library(ggplot2)
+library(MLmetrics)
+library(MASS)
+
+```
+
+## Data Cleaning and Preparation
+
+**Importing Data Set**
+
+```{r}
+WHO <- read.csv("WHO.csv", sep = ",")
+head(WHO)
+summary(WHO)
+```
+
+**Checking Data Types**
+
+```{r}
+str(WHO)
+```
+**Checking Observations**
+
+```{r}
+dim(WHO)
+```
+
+**Checking for Missing Values**
+
+```{r}
+# Assuming WHO is your dataframe
+null_count <- colSums(is.na(WHO))
+total_rows <- nrow(WHO)
+
+# Calculate percentage of null values
+percentage_null <- round((null_count / total_rows) * 100, 2)
+
+# Create a dataframe to display results
+null_summary <- data.frame(Null_Count = null_count, Percentage_Null = percentage_null)
+
+# Print the summary
+print(null_summary)
+
+```
+
+```{r}
+for (col in names(WHO)) {
+  if (is.numeric(WHO[[col]]) || is.logical(WHO[[col]])) {
+    col_mean <- mean(WHO[[col]], na.rm = TRUE)
+    WHO[[col]][is.na(WHO[[col]])] <- col_mean
+  }
+}
+```
+
+```{r}
+# Assuming WHO is your dataframe
+null_count <- colSums(is.na(WHO))
+total_rows <- nrow(WHO)
+
+# Calculate percentage of null values
+percentage_null <- round((null_count / total_rows) * 100, 2)
+
+# Create a dataframe to display results
+null_summary <- data.frame(Null_Count = null_count, Percentage_Null = percentage_null)
+
+# Print the summary
+print(null_summary)
+
+```
+
+**Checking for Duplicate Values**
+
+```{r}
+sum(WHO[duplicated(WHO), ])
+```
+
+```{r}
+str(WHO)
+head(WHO)
+```
+
+```{r}
+WHO <- WHO[, c(2,4:22,1,3)]
+
+str(WHO)
+```
+
+## Exploratory Data Analysis
+
+**Histogram**
+
+```{r}
+
+ggplot(data = WHO, aes(x = BMI )) +
+  geom_histogram(binwidth = 10, fill = "gold", color = "blue") +
+  labs(title = "histogram of BMI in WHO_dataset", x = "BMI", y = "Frequency") +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+```{r}
+summary(WHO$BMI)
+```
+
+**Boxplot**
+
+
+```{r}
+
+ggplot(data = WHO, aes(x = Polio)) +
+  geom_boxplot(fill = "pink", color = "black") +
+  labs(title = "Boxplot of polio immunization", x = "Polio", y = "frequency") +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+```{r}
+summary(WHO$Polio)
+```
+
+**Overlay Boxplot**
+
+```{r}
+
+ggplot(data= WHO, aes(x=Adult.Mortality, y =Status)) +
+ geom_boxplot(fill = "lightgreen", color = "black") +
+  labs(
+   title = "Boxplot of Adult mortality ",
+   x = "adult mortality",
+   y = "type of nation"
+ ) +
+ theme_minimal() +
+ theme(plot.title = element_text(hjust = 0.5))
+
+
+```
+The overlay boxplot shows the adult mortality in developed and developing countries. The x axis shows the no. of adult mortality, the Y axis shows whether it is developed or developing. Developing nations are having higher adult mortality than developed nations.
+
+**Overlay Histogram**
+
+```{r}
+
+ggplot(data = WHO, aes(x = Total.expenditure )) +
+  geom_histogram(binwidth = 10, aes(fill = Status), color = "black") +
+  labs(
+    x = "Total.expenditure ",
+    y = "Frequency",
+    fill = "country status",
+    title = "Overlay Histogram of Total.expenditure"
+  ) +
+  theme_classic() +
+  scale_fill_brewer(palette = "Set3") +
+  theme(axis.text.x = element_text( hjust = 1,), plot.title = element_text(hjust = 0.5))
+```
+
+
+The above overlay histogram depicts the government expenditure on health sector out of total expenditure. Clearly we can see the developed nations spending more money on health sector. Only few developed nations are spending 20% of their budget into 
+the health sector.Most no. of nations are spending over 10% of budget and almost half of them in 0 to 10 percentage range.
+## Hypotheses
+
+```{r}
+#creating subsets
+WHO_Developed <- WHO$Schooling [WHO$Status == "Developed"]
+
+WHO_Developing <- WHO$Schooling  [WHO$Status == "Developing"]
+```
+
+
+Change or keep it in chunk
+Parameter:
+<br>
+$\sigma^2_{D} =$ Variance of schooling in developed countries.
+
+$\sigma^2_{ND} =$ Variance of schooling in developing countries.
+
+Hypotheses:
+
+\begin{align*}
+H_0:\sigma^2_{D}/\sigma^2_{ND} & = 1, \\
+H_1:\sigma^2_{D}/\sigma^2_{ND} & \ne 1,
+\end{align*}
+
+
+**Variance Test**
+
+```{r}
+var.test(WHO_Developed, WHO_Developing)
+```
+
+
+Parameter:
+
+Change or keep it in chunk
+<br>
+$\mu_{D} =$ mean of schooling in developed countries.
+
+$\mu_{ND} =$ mean of schooling in developing.
+
+Hypotheses:
+
+\begin{align*}
+H_0: \mu_{D}  = \mu_{ND} ,\\
+H_1: \mu_{D} \ne \mu_{ND}.
+\end{align*}
+
+**Hypotheses Test**
+
+```{r}
+t.test(WHO_Developed, WHO_Developing, var.equal = FALSE)
+```
+
+## Linear Regression
+
+```{r}
+set.seed(123)
+
+i <- sample(2, nrow(WHO), replace = TRUE, prob = c(0.8, 0.2))
+WHOTraining <- WHO[i == 1, ]
+WHOTest <- WHO[i == 2, ]
+summary(WHOTraining)
+summary(WHOTest)
+```
+
+```{r}
+model_1 <- lm(Adult.Mortality ~ Polio , data = WHOTraining)
+summary(model_1)
+```
+
+```{r}
+model_2 <- lm(Adult.Mortality ~ Polio + Alcohol + Hepatitis.B , data = WHOTraining[, 1:20])
+summary(model_2)
+```
+
+```{r}
+intercept_only <- lm(Adult.Mortality  ~ 1, data=WHOTraining[, 1:20])
+
+all <- lm(Adult.Mortality ~. , data = WHOTraining[, 1:20])
+
+model_3 <- stepAIC (intercept_only, direction='forward',scope = formula(all))
+model_3$anova
+```
+
+```{r}
+summary(model_3)
+```
+
+
+```{r}
+model_4<- stepAIC (all, direction='backward')
+```
+
+```{r}
+summary(model_4)
+
+```
+
+```{r}
+model_5<- stepAIC (all, direction='both')
+```
+
+```{r}
+summary(model_5)
+```
+
+```{r}
+plot(WHOTraining$Adult.Mortality, fitted(model_1),xlab = "Polio", ylab = "Adult Mortality", main = "Simple Linear regression model")
+  
+abline(0, 1, col = "blue")
+
+plot(WHOTraining$Adult.Mortality,fitted(model_2),xlab = "Polio , Alcohol, Hepatitis.B", ylab = "Adult Mortality", main = "Multiple regression model")
+  
+abline(0, 1, col = "blue")
+
+plot(WHOTraining$Adult.Mortality,fitted(model_3),xlab = "Adult Mortality", ylab = "Adult Mortality", main = "Forward stepwise regression model")
+  
+abline(0, 1, col = "blue")
+
+plot(WHOTraining$Adult.Mortality,fitted(model_4),xlab = "", ylab = "Adult Mortality", main = "Backward stepwise regression model")
+  
+abline(0, 1, col = "blue")
+
+plot(WHOTraining$Adult.Mortality,fitted(model_5),xlab = "Actual New Deaths", ylab = "Adult Mortality", main = "Full stepwise regression model")
+  
+abline(0, 1, col = "blue")
+```
+
+
+
+```{r}
+
+aic_values <- c(
+  AIC(model_1),
+  AIC(model_2),
+  AIC(model_3),
+  AIC(model_4),
+  AIC(model_5)
+)
+
+#Add
+
+adjusted_r_squared <- c(
+  summary(model_1)$adj.r.squared,
+  summary(model_2)$adj.r.squared,
+  summary(model_3)$adj.r.squared,
+   summary(model_4)$adj.r.squared,
+   summary(model_5)$adj.r.squared
+)
+
+#change
+predict_model_1 <- predict(model_1, newdata = WHOTest)
+predict_model_2 <- predict(model_2, newdata = WHOTest)
+predict_model_3 <- predict(model_3, newdata = WHOTest)
+predict_model_4 <- predict(model_4, newdata = WHOTest)
+predict_model_5 <- predict(model_5, newdata = WHOTest)
+
+mae_values <- c(
+  MAE(y_pred = predict_model_1, y_true = WHOTest$Adult.Mortality),
+  MAE(y_pred = predict_model_2, y_true = WHOTest$Adult.Mortality),
+  MAE(y_pred = predict_model_3, y_true = WHOTest$Adult.Mortality),
+   MAE(y_pred = predict_model_4, y_true = WHOTest$Adult.Mortality),
+    MAE(y_pred = predict_model_5, y_true = WHOTest$Adult.Mortality)
+)
+
+mse_values <- c(
+  MSE(y_pred = predict_model_1, y_true = WHOTest$Adult.Mortality),
+  MSE(y_pred = predict_model_2, y_true = WHOTest$Adult.Mortality),
+  MSE(y_pred = predict_model_3, y_true = WHOTest$Adult.Mortality),
+    MSE(y_pred = predict_model_4, y_true = WHOTest$Adult.Mortality),
+    MSE(y_pred = predict_model_5, y_true = WHOTest$Adult.Mortality)
+)
+
+#change
+estimation_table <- data.frame(
+  Model = c("Simple Linear Regression","multiple", "Forward Stepwise", "Backward Stepwise","full"),
+  AIC = aic_values,
+  Adjusted_R_Squared = adjusted_r_squared,
+  MAE = mae_values,
+  MSE = mse_values
+)
+estimation_table
+```
+
